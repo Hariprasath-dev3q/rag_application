@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG System - Ask Questions About Your Documents</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #fff;
+        min-height: 100vh;
+        padding: 20px;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 30px;
+        padding: 30px;
+      }
+
+      .upload-section {
+        background: #f8fafc;
+        padding: 25px;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .section-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #2d3748;
+      }
+
+      .upload-form {
+        margin-bottom: 30px;
+      }
+
+      .file-input {
+        width: 100%;
+        padding: 15px;
+        border: 2px dashed #4facfe;
+        border-radius: 10px;
+        margin-bottom: 15px;
+      }
+
+      .upload-btn {
+        background: #4facfe;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        width: 100%;
+      }
+
+      .upload-btn:hover {
+        background: #3182ce;
+      }
+
+      .document-list {
+        margin-top: 20px;
+      }
+
+      .document-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid #4facfe;
+      }
+
+      .document-name {
+        flex-grow: 1;
+        font-weight: 500;
+      }
+
+      .delete-btn {
+        background: #e53e3e;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        margin-left: 10px;
+      }
+
+      .qa-section {
+        padding: 25px;
+        background: white;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .question-form {
+        margin-bottom: 30px;
+      }
+
+      .question-input {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 1rem;
+        margin-bottom: 15px;
+        resize: vertical;
+        min-height: 100px;
+      }
+
+      .question-input:focus {
+        outline: none;
+        border-color: #4facfe;
+      }
+
+      .ask-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1rem;
+        width: 100%;
+      }
+
+      .ask-btn:hover {
+        background: #5a67d8;
+      }
+
+      .ask-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .answer-area {
+        background: #f7fafc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        min-height: 150px;
+      }
+
+      .loading {
+        text-align: center;
+        color: #4facfe;
+        font-style: italic;
+      }
+
+      .answer {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #4facfe;
+        line-height: 1.6;
+      }
+
+      .error {
+        color: #e53e3e;
+        background: #fed7d7;
+        padding: 15px;
+        border-radius: 8px;
+      }
+
+      .messages {
+        margin-bottom: 20px;
+      }
+
+      .message {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+
+      .message.success {
+        background: #c6f6d5;
+        color: #22543d;
+        border-left: 4px solid #38a169;
+      }
+
+      .message.error {
+        background: #fed7d7;
+        color: #742a2a;
+        border-left: 4px solid #e53e3e;
+      }
+
+      @media (max-width: 768px) {
+        .main-content {
+          grid-template-columns: 1fr;
+          gap: 20px;
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>RAG System</h1>
+        <p>Upload documents and ask AI questions about their content</p>
+      </div>
+
+      {% if messages %}
+      <div class="messages" style="padding: 20px 30px 0">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="main-content">
+        <div class="upload-section">
+          <h2 class="section-title">Upload Documents</h2>
+
+          <form
+            method="post"
+            action="{% url 'upload_document' %}"
+            enctype="multipart/form-data"
+            class="upload-form"
+          >
+            {% csrf_token %}
+            <input type="file" name="document" accept=".pdf,.docx,.txt" class="file-input" required/>
+            <button type="submit" class="upload-btn">Upload Document</button>
+          </form>
+
+          <div class="document-list">
+            <h3>Uploaded Documents ({{ documents.count }})</h3>
+            {% for doc in documents %}
+            <div class="document-item">
+              <div class="document-name">
+                {{ doc.title }} {% if doc.processed %}
+                <span style="color: green; font-size: 0.8em">✓ Processed</span>
+                {% else %}
+                <span style="color: orange; font-size: 0.8em"
+                  >⏳ Processing...</span
+                >
+                {% endif %}
+              </div>
+              <a
+                href="{% url 'delete_document' doc.id %}"
+                class="delete-btn"
+                onclick="return confirm('Are you sure you want to delete this document?')"
+                >Delete</a
+              >
+            </div>
+            {% empty %}
+            <p style="text-align: center; color: #666; padding: 20px">
+              No documents uploaded yet
+            </p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="qa-section">
+          <h2 class="section-title">Ask Questions</h2>
+
+          <div class="question-form">
+            <textarea
+              id="questionInput"
+              class="question-input"
+              placeholder="Ask any question about your uploaded documents..."
+              required
+            ></textarea>
+            <button id="askBtn" class="ask-btn" onclick="askQuestion()">
+              Ask Question
+            </button>
+          </div>
+
+          <div id="answerArea" class="answer-area">
+            <p style="text-align: center; color: #666">
+              Your answers will appear here...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function askQuestion() {
+        const questionInput = document.getElementById("questionInput");
+        const askBtn = document.getElementById("askBtn");
+        const answerArea = document.getElementById("answerArea");
+
+        const question = questionInput.value.trim();
+        if (!question) {
+          alert("Please enter a question!");
+          return;
+        }
+
+        // Show loading state
+        askBtn.disabled = true;
+        askBtn.textContent = "Thinking...";
+        answerArea.innerHTML =
+          '<div class="loading">Give me a few seconds, AI is thinking about your question...</div>';
+
+        try {
+          const response = await fetch('{% url "ask_question" %}', {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify({ question: question }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            answerArea.innerHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <strong>Question:</strong> ${question}
+                        </div>
+                        <div class="answer">
+                            <strong>Answer:</strong><br>
+                            ${data.answer}
+                        </div>
+                    `;
+            questionInput.value = "";
+          } else {
+            answerArea.innerHTML = `<div class="error">${data.error}</div>`;
+          }
+        } catch (error) {
+          answerArea.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+        }
+
+        // This is Reset button
+        askBtn.disabled = false;
+        askBtn.textContent = "Ask Question";
+      }
+
+      // Here Allow Enter key to submit question
+      document
+        .getElementById("questionInput")
+        .addEventListener("keydown", function (event) {
+          if (event.key === "Enter" && event.ctrlKey) {
+            askQuestion();
+          }
+        });
+    </script>
+  </body>
+</html>
