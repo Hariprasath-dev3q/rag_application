@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import Document, ChatHistory
 from .rag_engine import rag_engine
+import tempfile
 
 # Create your views here.
 
@@ -35,6 +36,12 @@ def upload_document(request):
         if f'.{file_extension}' not in allowed_extensions:
             messages.error(request, 'Please upload only PDF, DOCX, or TXT files!')
             return redirect('home')
+
+        # Save the file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp:
+            for chunk in uploaded_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
         
         # Save document
         document = Document(
@@ -45,7 +52,7 @@ def upload_document(request):
         
         # Process document with RAG engine
         try:
-            success = rag_engine.process_document(document.file.path)
+            success = rag_engine.process_document(tmp_path)
             if success:
                 document.processed = True
                 document.save()
