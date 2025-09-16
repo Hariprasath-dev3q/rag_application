@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import Document, ChatHistory
 from .rag_engine import rag_engine
-import tempfile
+#import tempfile
 
 # Create your views here.
 
@@ -38,10 +38,10 @@ def upload_document(request):
             return redirect('home')
 
         # Save the file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp:
+        '''with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp:
             for chunk in uploaded_file.chunks():
                 tmp.write(chunk)
-            tmp_path = tmp.name
+            tmp_path = tmp.name'''
         
         # Save document
         document = Document(
@@ -52,7 +52,7 @@ def upload_document(request):
         
         # Process document with RAG engine
         try:
-            success = rag_engine.process_document(tmp_path)
+            success = rag_engine.process_document(document.file.path)
             if success:
                 document.processed = True
                 document.save()
